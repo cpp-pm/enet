@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
-project(enet)
+project(enet VERSION 1.3.13)
 
 # The "configure" step.
 include(CheckFunctionExists)
@@ -43,6 +43,19 @@ if(HAS_SOCKLEN_T)
 endif()
  
 include_directories(${PROJECT_SOURCE_DIR}/include)
+
+set(INCLUDE_FILES
+    include/enet/callbacks.h
+    include/enet/enet.h
+    include/enet/list.h
+    include/enet/protocol.h
+    include/enet/time.h
+    include/enet/types.h
+    include/enet/unix.h
+    include/enet/utility.h
+    include/enet/win32.h
+)
+
  
 add_library(enet STATIC
         callbacks.c
@@ -54,4 +67,61 @@ add_library(enet STATIC
         protocol.c
         unix.c
         win32.c
+        ${INCLUDE_FILES}
     )
+
+if(WIN32)
+    target_link_libraries(enet PUBLIC winmm Ws2_32)
+endif()
+
+#######################################
+#       cmake config-mode stuff       #
+#######################################
+
+set(config_install_dir "lib/cmake/${PROJECT_NAME}")
+set(include_install_dir "include")
+
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/cmake")
+
+set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+set(targets_export_name "${PROJECT_NAME}Targets")
+set(namespace "${PROJECT_NAME}::")
+
+include(CMakePackageConfigHelpers)
+
+# Note: PROJECT_VERSION is used as a VERSION
+write_basic_package_version_file(
+    "${version_config}" COMPATIBILITY SameMajorVersion
+)
+
+# Note: variable 'targets_export_name' used
+configure_file("Config.cmake.in" "${project_config}" @ONLY)
+
+
+install(
+    TARGETS enet
+    EXPORT "${targets_export_name}"
+    LIBRARY DESTINATION "lib"
+    ARCHIVE DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
+    INCLUDES DESTINATION "${include_install_dir}"
+)
+
+install(
+    FILES ${INCLUDE_FILES}
+    DESTINATION "${include_install_dir}/enet"
+)
+
+
+install(
+    FILES "${project_config}" "${version_config}"
+    DESTINATION "${config_install_dir}"
+)
+
+
+install(
+    EXPORT "${targets_export_name}"
+    NAMESPACE "${namespace}"
+    DESTINATION "${config_install_dir}"
+)
